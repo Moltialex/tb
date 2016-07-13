@@ -24,7 +24,6 @@ bool cms_b2g_15_004::Initialize(const MA5::Configuration& cfg, const std::map<st
         Manager()->AddRegionSelection("all");
         Manager()->AddRegionSelection("electron final state");
         Manager()->AddRegionSelection("muon final state");
-        Manager()->AddRegionSelection("1 b-tagged");
 
         //Manager()->AddCut("trigger");
         //Manager()->AddCut("pt lepton> 180 GeV");
@@ -37,6 +36,7 @@ bool cms_b2g_15_004::Initialize(const MA5::Configuration& cfg, const std::map<st
         Manager()->AddCut("1+ electrons", SRForElectron);
         Manager()->AddCut("pt leading jet> 350 GeV", SRForElectron);
         Manager()->AddCut("pt subleading jet> 30 GeV", SRForElectron);
+        Manager()->AddCut("b-tagging electron", SRForElectron);
         Manager()->AddCut("missing ET> 120 GeV", SRForElectron);
         Manager()->AddCut("delta phi (missing ET, electron)< 2 rad", SRForElectron);
 
@@ -44,7 +44,9 @@ bool cms_b2g_15_004::Initialize(const MA5::Configuration& cfg, const std::map<st
         Manager()->AddCut("1+ muons", SRForMuon);
         Manager()->AddCut("pt leading jet> 450 GeV", SRForMuon);
         Manager()->AddCut("pt subleading jet> 30 GeV", SRForMuon);
+        Manager()->AddCut("b-tagging muon", SRForMuon);
         Manager()->AddCut("missing ET> 50 GeV", SRForMuon);
+
 
         return true;
 }
@@ -117,24 +119,27 @@ bool cms_b2g_15_004::Execute(SampleFormat& sample, const EventFormat& event)
                         if(pt> 180. && fabs(eta)< 2.1 && good) myMuons.push_back(CurrentMuon);
                 }
 
-                if(Manager()->ApplyCut(myElectrons.size()>=1, "1+ electrons")){
-                        for(unsigned int j= 0; j< event.rec()->jets().size(); j++){
-                                const RecJetFormat *CurrentJet= &(event.rec()->jets()[j]);
-                                myJets.push_back(CurrentJet);
-                        }
-                        SORTER->sort(myJets);
-                        if(!Manager()->ApplyCut(myJets[0]->momentum().Pt()> 350, "pt leading jet> 350 GeV")) return true;
+                for(unsigned int j= 0; j< event.rec()->jets().size(); j++){
+                        const RecJetFormat *CurrentJet= &(event.rec()->jets()[j]);
+                        myJets.push_back(CurrentJet);
+                }
+                SORTER->sort(myJets);
+
+                if(!Manager()->ApplyCut(myElectrons.size()>=1, "1+ electrons")) return true;
+                if(!Manager()->ApplyCut(myJets[0]->momentum().Pt()> 350, "pt leading jet> 350 GeV")) return true;
+                if(!Manager()->ApplyCut(myJets[1]->momentum().Pt()> 30., "pt subleading jet> 30 GeV")) return true;
+                if(!Manager()->ApplyCut((myJets[0]->btag() || myJets[1]->btag()), "b-tagging electron")) return true;
+                if(!Manager()->ApplyCut(event.rec()->MET().et()> 120., "missing ET> 120 GeV")) return true;
+                if(myElectrons.size()>=1){
+                        double phi= event.rec()->MET().phi()- myElectrons[0]->phi();
+                        if(!Manager()->ApplyCut(fabs(phi)< 2.,"delta phi (missing ET, electron)< 2 rad")) return true;
                 }
 
-
-                if(Manager()->ApplyCut(myMuons.size()>=1, "1+ muons")){
-                        for(unsigned int j= 0; j< event.rec()->jets().size(); j++){
-                                const RecJetFormat *CurrentJet= &(event.rec()->jets()[j]);
-                                myJets.push_back(CurrentJet);
-                        }
-                        SORTER->sort(myJets);
-                        if(!Manager()->ApplyCut(myJets[0]->momentum().Pt()> 450, "pt leading jet> 450 GeV")) return true;
-                }
+                if(!Manager()->ApplyCut(myMuons.size()>=1, "1+ muons")) return true;
+                if(!Manager()->ApplyCut(myJets[0]->momentum().Pt()> 450., "pt leading jet> 450 GeV")) return true;
+                if(!Manager()->ApplyCut(myJets[1]->momentum().Pt()> 30., "pt subleading jet> 30 GeV")) return true;
+                if(!Manager()->ApplyCut((myJets[0]->btag() || myJets[1]->btag()), "b-tagging muon")) return true;
+                if(!Manager()->ApplyCut(event.rec()->MET().et()> 50., "missing ET> 50 GeV")) return true;
 
                 /*if(Manager()->ApplyCut((myElectrons.size()+ myMuons.size()> 1), "2+ candidate leptons")){
                   cout<< "Je suis la!!!" << endl; 
