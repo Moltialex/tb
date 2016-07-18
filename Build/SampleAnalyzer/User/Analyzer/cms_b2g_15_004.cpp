@@ -47,6 +47,11 @@ bool cms_b2g_15_004::Initialize(const MA5::Configuration& cfg, const std::map<st
         Manager()->AddCut("b-tagging muon", SRForMuon);
         Manager()->AddCut("missing ET> 50 GeV", SRForMuon);
 
+        string SRForMass[]= {"electron final state", "muon final state"};
+        Manager()->AddCut("pT top> 250 GeV", SRForMass);
+        Manager()->AddCut("pT leading jet+ subleading jet> 350 GeV", SRForMass);
+
+        Manager()->AddHisto("Invariant mass", 500, 0, 5000);
 
         return true;
 }
@@ -141,9 +146,35 @@ bool cms_b2g_15_004::Execute(SampleFormat& sample, const EventFormat& event)
                 if(!Manager()->ApplyCut((myJets[0]->btag() || myJets[1]->btag()), "b-tagging muon")) return true;
                 if(!Manager()->ApplyCut(event.rec()->MET().et()> 50., "missing ET> 50 GeV")) return true;
 
-                /*if(Manager()->ApplyCut((myElectrons.size()+ myMuons.size()> 1), "2+ candidate leptons")){
-                  cout<< "Je suis la!!!" << endl; 
-                  }*/
+                if(myElectrons.size()>=1){
+                        double Wmass= (myElectrons[0]->momentum()+event.rec()->MET().momentum()).M();
+                        double test= sqrt(2*myElectrons[0]->pt()*event.rec()->MET().pt()*(cosh(myElectrons[0]->eta() -event.rec()->MET().eta())- cos(myElectrons[0]->phi() - event.rec()->MET().phi())));
+                        if(pow((myElectrons[0]->px()*event.rec()->MET().px() + myElectrons[0]->py()*event.rec()->MET().py() + (80.4*80.4)/2),2)- event.rec()->MET().et()*event.rec()->MET().et()*
+                                (myElectrons[0]->e()*myElectrons[0]->e() - myElectrons[0]->pz()*myElectrons[0]->pz())>0){
+                        double pzneutri1= (myElectrons[0]->pz()*(myElectrons[0]->px()*event.rec()->MET().px() + myElectrons[0]->py()*event.rec()->MET().py() + (80.4*80.4)/2) + 
+                                        myElectrons[0]->e()* sqrt(pow((myElectrons[0]->px()*event.rec()->MET().px() + myElectrons[0]->py()*event.rec()->MET().py() + (80.4*80.4)/2),2)- event.rec()->MET().et()*event.rec()->MET().et()*
+                                                (myElectrons[0]->e()*myElectrons[0]->e() - myElectrons[0]->pz()*myElectrons[0]->pz())))/(myElectrons[0]->e()*myElectrons[0]->e()- myElectrons[0]->pz()*myElectrons[0]->pz());
+                        double pzneutri2= (myElectrons[0]->pz()*(myElectrons[0]->px()*event.rec()->MET().px() + myElectrons[0]->py()*event.rec()->MET().py() + (80.4*80.4)/2) - 
+                                        myElectrons[0]->e()* sqrt(pow((myElectrons[0]->px()*event.rec()->MET().px() + myElectrons[0]->py()*event.rec()->MET().py() + (80.4*80.4)/2),2)- event.rec()->MET().et()*event.rec()->MET().et()*
+                                                (myElectrons[0]->e()*myElectrons[0]->e() - myElectrons[0]->pz()*myElectrons[0]->pz())))/(myElectrons[0]->e()*myElectrons[0]->e()- myElectrons[0]->pz()*myElectrons[0]->pz());
+                        cout<<"pz1: "<< pzneutri1 << endl; 
+                        cout<<"pz2: "<< pzneutri2 << endl; 
+                        double nrjneut1= sqrt(event.rec()->MET().px()*event.rec()->MET().px() + event.rec()->MET().py()*event.rec()->MET().py() + pzneutri1*pzneutri1); 
+                        double nrjneut2= sqrt(event.rec()->MET().px()*event.rec()->MET().px() + event.rec()->MET().py()*event.rec()->MET().py() + pzneutri2*pzneutri2); 
+                        cout<<"e neut1: "<< nrjneut1 << endl;
+                        cout<<"e neut2: "<< nrjneut2 << endl;
+                        double lachose= sqrt(2*(nrjneut1*myElectrons[0]->e()-myElectrons[0]->px()*event.rec()->MET().px()-myElectrons[0]->py()*event.rec()->MET().py()-myElectrons[0]->pz()*pzneutri1));
+                        cout<<"la masse: "<< lachose << endl;
+                                                }
+                        //cout<<"W: "<< Wmass << endl;
+                        //cout<<"E neutri: "<< event.rec()->MET().e() << endl;
+                        //cout<<"pt: "<< event.rec()->MET().pt() << endl;
+                        //cout<<"px: "<< event.rec()->MET().px() << endl;
+                        //cout<<"py: "<< event.rec()->MET().py() << endl;
+                        //cout<<"pz: "<< event.rec()->MET().pz() << endl;
+                        //cout<<"truc: "<< sqrt(event.rec()->MET().px()*event.rec()->MET().px()+event.rec()->MET().py()*event.rec()->MET().py()) << endl;
+                        //cout<<"test: "<< test << endl;
+                }
 
         }
 
